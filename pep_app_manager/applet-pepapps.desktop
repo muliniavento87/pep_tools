@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Exec=pepapps
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Applet Apps manager
+Comment=GNOME Applet Apps manager
+Icon=/usr/local/PepAppsManager/icons/pepapps.svg
+Terminal=false
+X-KeepTerminal=false

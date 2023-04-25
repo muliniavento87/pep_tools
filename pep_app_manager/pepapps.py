@@ -38,16 +38,20 @@ class MyLinuxApplet:
         # set icona da percorso personalizzato (ignorando quelle
         # specificate in "AppIndicator3.Indicator.new")
         #   - non solo SVG
-        self.app.set_icon_full("{}/icons/icons_security.svg".format(PATH_ROOT), "Icon name")
+        self.app.set_icon_full("{}/icons/pepapps.svg".format(PATH_ROOT), "Icon name")
         self.app.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.app.set_menu(self.init_menu())
         Gtk.main()
     
     # -----------------------------------------------------------------------
     def new_menu_cmd(self, menu, d_glob, d_loc):
+
+        self.new_menu_actions(menu, d_glob, d_loc)
+
         # creo dinamicamente le funzioni e i riferimenti li pusho in "pool_f"
         pool_f = []
         for d in d_loc:
+            '''
             # gruppo
             if 'items' in d:
                 pool_f.append([d['name'], None, d['items']])
@@ -62,6 +66,7 @@ class MyLinuxApplet:
                 exec(ct)
                 cmd = 'pool_f.append(["{}", nf_{}, None])'.format(d['name'], str(len(pool_f)))
                 exec(cmd)
+            '''
         
         # disegna comandi salvati, associando la action\funzione creata prima ad-hoc nel "pool_f"
         for pf in pool_f:
@@ -78,37 +83,21 @@ class MyLinuxApplet:
                 item.connect("activate", pf[1])
                 menu.append(item)
         
-        self.new_menu_actions(menu, d_glob, d_loc)
-        
         return menu
     
     # -----------------------------------------------------------------------
     def new_menu_actions(self, menu, d_glob, d_loc):
         #print(json.dumps(config_data))
 
-        # separatore
-        separator = Gtk.SeparatorMenuItem()
-        menu.append(separator)
-
         # menu a scomparsa
         item = Gtk.MenuItem()
         item.set_label("Actions")
         submenu = Gtk.Menu()
         # aggiungi comando
-        subitem = Gtk.ImageMenuItem.new_with_label("Add cmd")
+        subitem = Gtk.ImageMenuItem.new_with_label("Install")
         subitem.connect("activate", lambda f: self.add_cmd(d_glob, d_loc))
         # icona
         image = Gtk.Image.new_from_file("{}/icons/add_cmd.svg".format(PATH_ROOT))
-        subitem.set_always_show_image(True)
-        subitem.set_image(image)
-        # append al menu
-        submenu.append(subitem)
-        
-        # aggiungi gruppo comandi
-        subitem = Gtk.ImageMenuItem.new_with_label("Add group")
-        subitem.connect("activate", lambda f: self.add_grp(d_glob, d_loc))
-        # icona
-        image = Gtk.Image.new_from_file("{}/icons/add_grp.svg".format(PATH_ROOT))
         subitem.set_always_show_image(True)
         subitem.set_image(image)
         # append al menu
@@ -127,6 +116,10 @@ class MyLinuxApplet:
         # registro submenu
         item.set_submenu(submenu)
         menu.append(item)
+
+        # separatore
+        separator = Gtk.SeparatorMenuItem()
+        menu.append(separator)
 
     
     # -----------------------------------------------------------------------

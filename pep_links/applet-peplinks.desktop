@@ -6,6 +6,6 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 Name=Applet Link
 Comment=GNOME Applet Link
-Icon=/usr/local/PepTools/PepLinks/icons/icons_security.svg
+Icon=/usr/local/PepAppsManager/apps/PepLinks/icons/icons_security.svg
 Terminal=false
 X-KeepTerminal=false
