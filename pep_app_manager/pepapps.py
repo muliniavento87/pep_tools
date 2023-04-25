@@ -367,6 +367,11 @@ class MyLinuxApplet:
             # crea e copia .desktop in "/usr/share/applications"
             self.crea_file(file_desktop, dst_cp_desktop_file)
 
+            if d['autorun'] == True:
+                dst_cp_desktop_file_autorun = "~/.config/autostart/{}.desktop".format(d["cmd"])
+                # lo copio anche per l'autorun
+                self.crea_file(file_desktop, dst_cp_desktop_file_autorun)
+
         # crea script uninstall in "/usr/local/PepAppsManager/apps_uninstall/<nuova/"
         dst_uninstall_file = "{}{}.sh".format(uninstaller_dir, d["cmd"])
         self.crea_file(script_uninstall, dst_uninstall_file)
