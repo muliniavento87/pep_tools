@@ -190,8 +190,8 @@ def flusso_installazione(d_in):
     #all_cmd = "sudo {}".format(' && '.join(cmds))
     #os.system(all_cmd)
 
-    # echo 'culo' | sudo -S sh -c 'cd /usr && nautilus .'
-    #password = "culo"  # Inserisci la password di root o di un utente con privilegi sudo
+    # echo 'passwd' | sudo -S sh -c 'cd /usr && nautilus .'
+    #password = "passwd"  # Inserisci la password di root o di un utente con privilegi sudo
     command = ' && '.join(cmds)
     #os.system('echo \'{}\' | sudo -S sh -c \'{}\''.format(password, command))
     os.system(command)
