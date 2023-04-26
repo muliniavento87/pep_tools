@@ -8,6 +8,7 @@ from gi.repository import Gtk, AppIndicator3
 import tkinter as tk
 from tkinter import filedialog
 import ntpath
+import urllib.parse
 
 # Su GNOME ed altri (su GTK e QT con le librerie di compatibilità)
 #   DIPENDENZE:
@@ -28,14 +29,15 @@ Name=My Applet
 Comment=My custom GNOME applet
 '''
 
-CONFIG_PATH = 'config.json'
 ROOT_APP = "/usr/local/PepAppsManager"
+CONFIG_PATH = '{}/config.json'.format(ROOT_APP)
 APP_INSTALLED = "apps"
 APP_INFO_REMOVE = "apps_uninstall"
 
 # recupero percorso attuale (così posso usare un percorso relativo
 # in "set_icon_full" per puntare la root di questa app)
-PATH_ROOT = os.popen('realpath .').read().split('\n')[0]
+PATH_ROOT = os.path.dirname(os.path.realpath(__file__)) #os.popen('realpath .').read().split('\n')[0]
+PATH_HOME_USER = os.popen('realpath ~').read().split('\n')[0]
 
 class MyLinuxApplet:
     # -----------------------------------------------------------------------
@@ -53,6 +55,8 @@ class MyLinuxApplet:
     
     # -----------------------------------------------------------------------
     def crea_file(self, lines, path):
+        cmd = 'echo "{}" > {}'.format('\n'.join(lines), path)
+        return cmd
         f = open(path, "w")
         f.write('\n'.join(lines))
         f.close()
@@ -96,10 +100,14 @@ class MyLinuxApplet:
         # creo dinamicamente le funzioni e i riferimenti li pusho in "pool_f"
         pool_f = []
         for d in d_loc:
-            ct = "" #d['cmd']
+            cmds = [
+                "sudogui sh {}/{}/{}/{}.sh".format(ROOT_APP, APP_INFO_REMOVE, d['cmd'], d['cmd']),
+                "sudogui rm -R {}/{}/{}/".format(ROOT_APP, APP_INFO_REMOVE, d['cmd'], d['cmd'])
+            ]
+            ct = ' && '.join(cmds)
             # QUESTO SOTTO funziona quando lo avvio da terminale
             # gnome-terminal -- bash -c 'ls; exec bash'
-            ct = "gnome-terminal -- bash -c \'{}; exec bash\'".format(ct)
+            #ct = "gnome-terminal -- bash -c \'{}; exec bash\'".format(ct)
             ct = 'def nf_{}(s):\n\tos.system("{}")'.format(str(len(pool_f)), ct)
             exec(ct)
             cmd = 'pool_f.append(["{}", nf_{}, None])'.format(d['name'], str(len(pool_f)))
@@ -199,21 +207,6 @@ class MyLinuxApplet:
     
     # -----------------------------------------------------------------------
     def popup_info(self, msg):
-        def show():
-            # Creazione del popup informativo
-            popup = tk.Toplevel()
-            popup.title("Informazioni")
-            popup.geometry("200x100")
-            popup.resizable(False, False)
-
-            # Creazione del testo del popup
-            label = tk.Label(popup, text=msg) #"Questo è un popup informativo.")
-            label.pack(pady=20)
-
-            # Creazione del pulsante di chiusura del popup
-            button = tk.Button(popup, text="Chiudi", command=popup.destroy)
-            button.pack()
-
         # Creazione della finestra principale
         popup = tk.Tk()
 
@@ -285,8 +278,6 @@ class MyLinuxApplet:
         }
         '''
 
-        cmds = []
-
         # fix path cartella
         if d["dir"][-1] != '/':
             d["dir"] = "{}/".format(d["dir"])
@@ -297,99 +288,34 @@ class MyLinuxApplet:
             self.popup_info("L\'eseguibile deve essere nella cartella")
             return
         
-        if d["cmd"] not in d["exe"]:
+        if d["cmd"] in [None, '']:
             self.popup_info("L\'eseguibile deve essere nella cartella")
             return
-
-        # costruisci il path della cartella da creare
-        dest_new_dir = "{}/apps/{}".format(ROOT_APP, d["cmd"])
-
-        # costruisci il link dell'eseguibile sulla cartella copiata
-        exe_relativo = d["exe"].split(d["dir"])[1]
-        dest_new_exe = "{}/apps/{}".format(ROOT_APP, exe_relativo)
-        new_link_exe = "/usr/local/bin/{}".format(d["cmd"])
-
-        # copia cartella app in "/usr/local/PepAppsManager/apps/"
-        cmd = "cp {} {}/{}/{}/".format(d["dir"], ROOT_APP, APP_INSTALLED, d["cmd"])
-        os.system(cmd)
-        # aggancio comando globale ad eseguibile
-        cmd = "ln -s {} {}".format(dest_new_exe, new_link_exe)
-        os.system(cmd)
-        # creo cartella app per info e uninstaller
-        uninstaller_dir = "{}/{}/{}/".format(ROOT_APP, APP_INFO_REMOVE, d["cmd"])
-        cmd = "mkdir {}".format(uninstaller_dir)
-        os.system(cmd)
-
-        #   - genera contenuto script uninstall
-        script_uninstall = [
-            "#!/bin/sh",
-            # main dir
-            "rm -R \'{}\'".format(dest_new_dir),
-            # rm link
-            "rm {}".format(new_link_exe)
-        ]
-
-        # crea .desktop
-        if d["label"] not in [None, ""]:
-            # crea .desktop e script uninstall => registra sul config.json
-            #   - genera contenuto .desktop
-            file_desktop = [
-                "[Desktop Entry]",
-                "Version=1.0",
-                "Terminal=false",
-                "Type=Application",
-                "Name={}".format(d["label"]),
-                "GenericName={}".format(d["label"]),
-                "Exec={}".format(dest_new_exe)
-            ]
-
-            if d['autorun'] == True:
-                file_desktop.append("Hidden=false")
-                file_desktop.append("NoDisplay=false")
-                file_desktop.append("X-GNOME-Autostart-enabled=true")
-
-            if d["icon"] not in [None, ""]:
-                # copia icona in "/usr/local/PepAppsManager/apps_uninstall/<nuova/"
-                icon_name = ntpath.basename(d["icon"])
-                dst_icon_file = "{}{}".format(uninstaller_dir, icon_name)
-                # copia fisica
-                cmd = "cp {} {}".format(d["icon"], dst_icon_file)
-                os.system(cmd)
-                # inserisco icona nel .desktop
-                file_desktop.append("Icon={}".format(dst_icon_file))
-            
-            #
-            dst_cp_desktop_file = "/usr/share/applications/{}.desktop".format(d["cmd"])
-            
-            # add rimozione .desktop allo script di uninstall
-            script_uninstall.append("rm /usr/share/applications/{}.desktop".format(d["cmd"]))
-
-            # crea e copia .desktop in "/usr/share/applications"
-            self.crea_file(file_desktop, dst_cp_desktop_file)
-
-            if d['autorun'] == True:
-                dst_cp_desktop_file_autorun = "~/.config/autostart/{}.desktop".format(d["cmd"])
-                # lo copio anche per l'autorun
-                self.crea_file(file_desktop, dst_cp_desktop_file_autorun)
-
-        # crea script uninstall in "/usr/local/PepAppsManager/apps_uninstall/<nuova/"
-        dst_uninstall_file = "{}{}.sh".format(uninstaller_dir, d["cmd"])
-        self.crea_file(script_uninstall, dst_uninstall_file)
         
-        config_data = self.read_config_file()
-        config_data.append({
-            "name": d["label"] if d["label"] not in [None, ""] else d["cmd"],
-            "cmd": d["cmd"]
-        })
+        parameters = d.copy()
+        parameters["ROOT_APP"] = ROOT_APP
+        parameters["CONFIG_PATH"] = CONFIG_PATH
+        parameters["APP_INSTALLED"] = APP_INSTALLED
+        parameters["APP_INFO_REMOVE"] = APP_INFO_REMOVE
+        parameters["PATH_ROOT"] = PATH_ROOT
+        parameters["PATH_HOME_USER"] = PATH_HOME_USER
+        
+        data = json.dumps(parameters)
+        data = urllib.parse.quote(data)
+        cmd = "sudogui python3 {}/help_installer.py '{}'".format(PATH_ROOT, data)
+        result = os.popen(cmd).read()
+        result = urllib.parse.unquote(result)
 
-        self.write_config_file(config_data)
+        # rigenera menu
+        self.app.set_menu(self.init_menu())
         print("FINITO")
 
     # -----------------------------------------------------------------------
     def popup_install(self):
         def select_folder():
+            default = path_dir.get() if path_dir.get() != "" else "~"
             global folder_path
-            folder_path = filedialog.askdirectory()
+            folder_path = filedialog.askdirectory(initialdir=default)
             path_dir.delete(0, tk.END)  # Rimuove il contenuto esistente
             path_dir.insert(0, folder_path)
             #popup.destroy()
