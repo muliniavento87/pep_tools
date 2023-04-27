@@ -171,10 +171,6 @@ def flusso_installazione(d_in):
         # add rimozione .desktop allo script di uninstall
         script_uninstall.append("rm {}".format(dst_cp_desktop_file_autorun))
 
-
-
-
-
     # crea script uninstall in "/usr/local/PepAppsManager/apps_uninstall/<nuova/"
     dst_uninstall_file = "{}{}.sh".format(uninstaller_dir, d["cmd"])
     cmd = crea_file(script_uninstall, dst_uninstall_file)
@@ -182,13 +178,6 @@ def flusso_installazione(d_in):
 
     cmd = "chmod -R 777 {}".format(CONFIG_PATH)
     cmds.append(cmd)
-
-    #cmd = "chmod -R 777 {}".format(ROOT_APP)
-    #cmds.append(cmd)
-
-    #all_cmd = "sudogui bash -c '{}'".format(' && '.join(cmds))
-    #all_cmd = "sudo {}".format(' && '.join(cmds))
-    #os.system(all_cmd)
 
     # echo 'passwd' | sudo -S sh -c 'cd /usr && nautilus .'
     #password = "passwd"  # Inserisci la password di root o di un utente con privilegi sudo
@@ -200,6 +189,7 @@ def flusso_installazione(d_in):
     # metti un SUDO grafico
     # FIXA ste cose dei permessi
 
+    # sudo rm /usr/local/bin/blender ; sudo rm -r /usr/local/PepAppsManager/apps/blender/ ; sudo rm -r /usr/local/PepAppsManager/apps_uninstall/blender/ ; sudo rm /usr/share/applications/blender.desktop ; sudo rm /home/giuseppe/.config/autostart/blender.desktop
     '''
     sudo rm /usr/local/bin/blender
     sudo rm -r /usr/local/PepAppsManager/apps/blender/
@@ -209,11 +199,9 @@ def flusso_installazione(d_in):
 
     sudo chmod -R 777 /usr/local/PepAppsManager/
     '''
-    # sudo rm /usr/local/bin/blender; sudo rm -r /usr/local/PepAppsManager/apps/blender/; sudo rm -r /usr/local/PepAppsManager/apps_uninstall/blender/; sudo rm /usr/share/applications/blender.desktop; sudo rm /home/giuseppe/.config/autostart/blender.desktop
-
     config_data = read_config_file(CONFIG_PATH)
     config_data.append({
-        "name": d["label"] if d["label"] not in [None, ""] else d["cmd"],
+        "name": "Remove {}".format(d["label"]),
         "cmd": d["cmd"]
     })
 

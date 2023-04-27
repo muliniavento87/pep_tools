@@ -26,10 +26,12 @@ Name=My Applet
 Comment=My custom GNOME applet
 '''
 
-CONFIG_PATH = 'config.json'
 # recupero percorso attuale (così posso usare un percorso relativo
 # in "set_icon_full" per puntare la root di questa app)
 PATH_ROOT = os.path.dirname(os.path.realpath(__file__)) #os.popen('realpath .').read().split('\n')[0]
+
+ROOT_APP = PATH_ROOT #"/usr/local/PepAppsLinks"
+CONFIG_PATH = '{}/store.json'.format(ROOT_APP)
 
 class MyLinuxApplet:
     # -----------------------------------------------------------------------

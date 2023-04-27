@@ -29,14 +29,17 @@ Name=My Applet
 Comment=My custom GNOME applet
 '''
 
-ROOT_APP = "/usr/local/PepAppsManager"
-CONFIG_PATH = '{}/config.json'.format(ROOT_APP)
+
 APP_INSTALLED = "apps"
 APP_INFO_REMOVE = "apps_uninstall"
 
 # recupero percorso attuale (così posso usare un percorso relativo
 # in "set_icon_full" per puntare la root di questa app)
 PATH_ROOT = os.path.dirname(os.path.realpath(__file__)) #os.popen('realpath .').read().split('\n')[0]
+
+ROOT_APP = PATH_ROOT #"/usr/local/PepAppsManager"
+CONFIG_PATH = '{}/store.json'.format(ROOT_APP)
+
 PATH_HOME_USER = os.popen('realpath ~').read().split('\n')[0]
 
 class MyLinuxApplet:
@@ -49,8 +52,6 @@ class MyLinuxApplet:
         self.app.set_icon_full("{}/icons/pepapps.svg".format(PATH_ROOT), "Icon name")
         self.app.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.app.set_menu(self.init_menu())
-        #print(self.popup_path_dir())
-        #self.popup_path_file()
         Gtk.main()
     
     # -----------------------------------------------------------------------
@@ -95,20 +96,41 @@ class MyLinuxApplet:
 
     # -----------------------------------------------------------------------
     def new_menu_cmd(self, menu, d_glob, d_loc):
+        
+        def cu(s, c, d):
+            # aggiorna voce menu sul JSON
+            data = json.dumps(d)
+            data = urllib.parse.quote(data)
+            c = "sudogui python3 {}/help_uninstaller.py '{}' '{}'".format(PATH_ROOT, c, d)
+            result = os.popen(c).read()
+            result = urllib.parse.unquote(result)
+
+            # rigenera menu
+            s.app.set_menu(self.init_menu())
+            print("FINITO")
+        
+
         self.new_menu_actions(menu, d_glob, d_loc)
+        
+        #exec('\n'.join(f))
+        data = json.dumps(d_glob)
+        data = urllib.parse.quote(data)
+        #cmd = "sudogui python3 {}/help_uninstaller.py '{}' '{}'".format(PATH_ROOT, data)
+        #result = os.popen(cmd).read()
+        #result = urllib.parse.unquote(result)
 
         # creo dinamicamente le funzioni e i riferimenti li pusho in "pool_f"
         pool_f = []
         for d in d_loc:
             cmds = [
+                #"echo 'aa'",
                 "sudogui sh {}/{}/{}/{}.sh".format(ROOT_APP, APP_INFO_REMOVE, d['cmd'], d['cmd']),
-                "sudogui rm -R {}/{}/{}/".format(ROOT_APP, APP_INFO_REMOVE, d['cmd'], d['cmd'])
+                "sudo rm -R {}/{}/{}/".format(ROOT_APP, APP_INFO_REMOVE, d['cmd'], d['cmd']),
+                #"sudo python3 {}/help_uninstaller.py '{}' '{}' '{}'".format(PATH_ROOT, CONFIG_PATH, d['cmd'], data)
             ]
             ct = ' && '.join(cmds)
-            # QUESTO SOTTO funziona quando lo avvio da terminale
-            # gnome-terminal -- bash -c 'ls; exec bash'
-            #ct = "gnome-terminal -- bash -c \'{}; exec bash\'".format(ct)
-            ct = 'def nf_{}(s):\n\tos.system("{}")'.format(str(len(pool_f)), ct)
+            #ct = 'def nf_{}(s, x):\n\tos.system("{}")\n\ts.app.set_menu(s.init_menu())'.format(str(len(pool_f)), ct)
+            ct = 'def nf_{}(x):\n\tos.system("{}")'.format(str(len(pool_f)), ct)
             exec(ct)
             cmd = 'pool_f.append(["{}", nf_{}, None])'.format(d['name'], str(len(pool_f)))
             exec(cmd)
@@ -125,6 +147,7 @@ class MyLinuxApplet:
             # voce
             else:
                 item = Gtk.ImageMenuItem.new_with_label(pf[0])
+                #item.connect("activate", lambda x: pf[1](self, x))
                 item.connect("activate", pf[1])
                 menu.append(item)
         
@@ -140,7 +163,6 @@ class MyLinuxApplet:
         submenu = Gtk.Menu()
         # aggiungi comando
         subitem = Gtk.ImageMenuItem.new_with_label("Install")
-        #subitem.connect("activate", lambda f: self.add_cmd(d_glob, d_loc))
         subitem.connect("activate", lambda f: self.popup_install())
         
         # icona
@@ -170,25 +192,7 @@ class MyLinuxApplet:
 
     # -----------------------------------------------------------------------
     def init_menu(self):
-        '''
-        config_data = []
-
-        # check esistenza file config
-        if not os.path.exists(CONFIG_PATH):
-            with open(CONFIG_PATH, "w") as f:
-                print("'{}' non esiste, ne ho creato uno nuovo".format(CONFIG_PATH))
-
-        # carica settings da file
-        config_file = open(CONFIG_PATH, "r")
-        if config_file:
-            content = config_file.read()
-            if content:
-                #print(content)
-                config_data = json.loads(content)
-        '''
-        
         config_data = self.read_config_file()
-
         menu = Gtk.Menu()
 
         # lista comandi con actions
@@ -209,13 +213,7 @@ class MyLinuxApplet:
     def popup_info(self, msg):
         # Creazione della finestra principale
         popup = tk.Tk()
-
-        # Creazione del pulsante per aprire il popup
-        #button = tk.Button(root, text="Mostra popup", command=show)
-        #button.pack(pady=20)
-
         # Creazione del popup informativo
-        #popup = tk.Toplevel()
         popup.title("Informazioni")
         popup.geometry("400x100")
         popup.resizable(False, False)
@@ -228,43 +226,9 @@ class MyLinuxApplet:
         button = tk.Button(popup, text="Chiudi", command=popup.destroy)
         button.pack()
 
-
-        ###show()
-
         # Avvio del mainloop di tkinter
         popup.mainloop()
-    
-    # -----------------------------------------------------------------------
-    def popup_path_dir(self):
-        def select_folder():
-            global folder_path
-            folder_path = None
-            folder_path = filedialog.askdirectory()
-            print("Selected folder:", folder_path)
-            root.destroy()
 
-        root = tk.Tk()
-        # Creazione del pulsante per aprire la finestra di dialogo
-        button = tk.Button(root, text="Seleziona cartella", command=select_folder)
-        button.pack(pady=10)
-        root.mainloop()
-        return folder_path
-    
-    # -----------------------------------------------------------------------
-    def popup_path_file(self):
-        def select_file():
-            global file_path
-            file_path = filedialog.askopenfilename()
-            print("Selected file:", file_path)
-            root.destroy()
-
-        root = tk.Tk()
-        # Creazione del pulsante per aprire la finestra di dialogo
-        button = tk.Button(root, text="Seleziona file", command=select_file)
-        button.pack(pady=10)
-        root.mainloop()
-        return file_path
-    
     # -----------------------------------------------------------------------
     def flusso_installazione(self, d):
         '''
@@ -419,11 +383,6 @@ class MyLinuxApplet:
         autorun = tk.BooleanVar()
         checkbox = tk.Checkbutton(frame_autorun, text="Autoavvia con Ubuntu", variable=autorun)
         checkbox.pack(side="left")
-
-        # --------------------
-        # Copia .desktop (/usr/share/applications)
-        # -----
-
         # --------------------
         # pulsanti
         frame2 = tk.Frame(popup)
@@ -434,10 +393,6 @@ class MyLinuxApplet:
         # -----
         button_ko = tk.Button(frame2, text="Annulla", command=cancel)
         button_ko.pack(side="left")
-
-        # from tkinter import ttk
-        # separator = ttk.Separator(popup, orient="horizontal")
-        # separator.pack(side="bottom", padx=50, fill="y")
 
         popup.protocol("WM_DELETE_WINDOW", cancel)
         popup.mainloop()
@@ -484,48 +439,6 @@ class MyLinuxApplet:
         return values
     
     # -----------------------------------------------------------------------
-    def add_cmd(self, d_glob, d_loc):
-        v = self.popup_cmd()
-        if v is None or v['cmd'] in [None, ""]:
-            # utente ha annullato
-            return
-
-        f = open(CONFIG_PATH, "w")
-        obj = {
-            "name": v['name'],
-            "cmd": v['cmd'],
-            "terminal": v['terminal']
-        }
-
-        d_loc.append(obj)
-        f.write(json.dumps(d_glob))
-        f.close()
-        self.app.set_menu(self.init_menu())
-
-        #print("-----")
-        #print(json.dumps(obj))
-        #print(json.dumps(d_glob))
-        #print("-----")
-    
-    # -----------------------------------------------------------------------
-    def add_grp(self, d_glob, d_loc):
-        g = self.popup_grp()
-        if g is None or g['name'] in [None, ""]:
-            # utente non ha inserito nome gruppo
-            return
-
-        f = open(CONFIG_PATH, "w")
-        grp = {
-            "name": g['name'],
-            "items": []
-        }
-
-        d_loc.append(grp)
-        f.write(json.dumps(d_glob))
-        f.close()
-        self.app.set_menu(self.init_menu())
-    
-    # -----------------------------------------------------------------------
     def edit_list(self, d_glob, d_loc):
         #os.system("gnome-text-editor '{}'".format(CONFIG_PATH))
         values = self.popup_editor_json(d_loc)
@@ -552,8 +465,6 @@ class MyLinuxApplet:
         f = open(CONFIG_PATH, "w")
         f.write(json.dumps(d_glob))
         f.close()
-        self.app.set_menu(self.init_menu())
-
         self.app.set_menu(self.init_menu())
 
     # -----------------------------------------------------------------------
