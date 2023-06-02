@@ -17,6 +17,10 @@ if [ -z ${SUDO_USER} ]; then
     exit 0;
 fi
 
+# cartella autorun
+create_autostart="mkdir ${HOME}/.config/autostart"
+${create_autostart};
+
 # app pep_app_manager
 exist=$(which peplinks);
 if [ -z ${exist} ]; then
